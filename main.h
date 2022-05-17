@@ -12,18 +12,11 @@
 #include <vector>
 /* odkomentować, jeżeli się chce DEBUGI */
 //#define DEBUG 
-/* boolean */
-#define TRUE 1
-#define FALSE 0
-
-/* używane w wątku głównym, determinuje jak często i na jak długo zmieniają się stany */
-#define STATE_CHANGE_PROB 50
-#define SEC_IN_STATE 2
 
 #define ROOT 0
 
 /* stany procesu */
-typedef enum {InRun, InMonitor, InSend, InFinish} state_t;
+typedef enum {Wait, GoHotel, GoGuide} state_t;
 extern state_t stan;
 extern int rank;
 extern int size;
@@ -35,12 +28,15 @@ struct pending{
 };
 /* Nasze zasoby */
 extern int guides;
-extern std::vector<pending>* hotels;
+extern std::vector<pending> hotels[5];
+
+//Frakcja
 extern int fraction;
 
-/* stan globalny wykryty przez monitor */
-extern int globalState;
-/* ilu już odpowiedziało na GIVEMESTATE */
+/* Do jakiego hotelu wchodzimy/w jakim jesteśmy */
+extern int myHotel;
+
+
 extern int numberReceived;
 extern int lamportClock;
 
@@ -51,7 +47,7 @@ extern int lamportClock;
 
 /* Typy wiadomości */
 #define REQUEST 0
-#define ACKOWLEDGE 1
+#define ACKNOWLEDGE 1
 #define RELASE 2
 #define DONE 3
 #define NEED_HOTEL 4

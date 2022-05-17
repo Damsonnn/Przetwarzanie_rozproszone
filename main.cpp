@@ -10,8 +10,8 @@
 /* flagi dla open */
 //#include <fcntl.h>
 
-state_t stan=InRun;
-volatile char end = FALSE;
+state_t stan=Wait;
+volatile char end = false;
 int size,rank,lamportClock; /* nie trzeba zerować, bo zmienna globalna statyczna */
 MPI_Datatype MPI_PAKIET_T;
 
@@ -117,23 +117,9 @@ void sendPacket(packet_t *pkt, int destination, int tag)
     if (freepkt) free(pkt);
 }
 
-void changeTallow( int newTallow )
-{
-    pthread_mutex_lock( &tallowMut );
-    if (stan==InFinish) { 
-	pthread_mutex_unlock( &tallowMut );
-        return;
-    }
-    pthread_mutex_unlock( &tallowMut );
-}
-
 void changeState( state_t newState )
 {
     pthread_mutex_lock( &stateMut );
-    if (stan==InFinish) { 
-	pthread_mutex_unlock( &stateMut );
-        return;
-    }
     stan = newState;
     pthread_mutex_unlock( &stateMut );
 }
