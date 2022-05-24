@@ -25,12 +25,12 @@ void mainLoop()
             if (i != myHotel){
                 packet.resource = i;
                 for (int j = 0; j < size; j++){
-                    if (j != rank) sendPacket(&packet, j, 0);
+                    sendPacket(&packet, j, 0);
                 }  
             }
         }
-        /*
-        //Rób swoje w hotelu proś o przewodnika
+
+        packet.type = REQUEST;
         packet.resource = GUIDE;
         for (int i = 0; i < size; i++){
             if (i != rank) sendPacket(&packet, i, 0);
@@ -38,11 +38,19 @@ void mainLoop()
         while (stan != GoGuide){
             continue;
         }
-        //Rób swoje z przewodnikiem, roześlij relase'y
+        //Rób swoje z przewodnikiem, potem roześlij relase'y
+        sleep(1); //Coś tam robię
+
         packet.type = RELASE;
         for (int i = 0; i < size; i++){
-            if (i != rank) sendPacket(&packet, i, 0);
+            sendPacket(&packet, i, 0);
         }
-        */
+        packet.resource = myHotel;
+        for (int i = 0; i < size; i++){
+            sendPacket(&packet, i, 0);
+        }
+
+        changeState(Wait);
+        sleep(1);//Czekam przed kolejną chęcią wejścia do hotelu
     }
 }

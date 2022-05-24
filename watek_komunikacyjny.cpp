@@ -1,9 +1,9 @@
 #include "main.h"
 #include "test/main.h"
 #include "watek_komunikacyjny.h"
+#include <cstdio>
+#include <cstdlib>
 #include <math.h>
-
-pthread_mutex_t recvMutex = PTHREAD_MUTEX_INITIALIZER;
 
 /* wątek komunikacyjny; zajmuje się odbiorem i reakcją na komunikaty */
 void *startKomWatek(void *ptr)
@@ -16,19 +16,25 @@ void *startKomWatek(void *ptr)
     /* Obrazuje pętlę odbierającą pakiety o różnych typach */
     while (true) {
 	debug("czekam na recv");
-        pthread_mutex_lock( &recvMutex );
         MPI_Recv( &packet, 1, MPI_PAKIET_T, MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
-        pthread_mutex_unlock( &recvMutex );
-        lamportClock = max(lamportClock, packet.ts) + 1;
-        pthread_mutex_unlock( &recvMutex );
+        incrementClock(&packet, lamportClock);
         switch (packet.type)
         {
         case REQUEST:
             // Obsługa request'a
-                destination = packet.src;
-                packet.type = ACKNOWLEDGE;
-                packet.src = rank;
-                sendPacket(&packet, destination, 0);
+            Pending* newRequest = new Pending;
+            newRequest->clock = packet.ts;
+            newRequest->fraction = packet.fraction;
+            newRequest->type = REQUEST;
+            if (packet.resource == GUIDE){
+                guideQueue.push_back(newRequest);
+            } else{
+
+            }
+            hotels[packet.resource]
+            destination = packet.src;
+            packet.type = ACKNOWLEDGE;
+            sendPacket(&packet, destination, 0);
             break;
         
         case ACKNOWLEDGE:
@@ -39,19 +45,9 @@ void *startKomWatek(void *ptr)
         case RELASE:
             // Obsługa relase'a
             break;
-        /*
-        case DONE:
-            //Wyszedł z krytycznej, wyślij relase
-            break;
 
-        case NEED_HOTEL:
-            //Wyślij requesty o hotel
-            break;
-
-        case NEED_GUIDE:
-            //Wyślij request o przewodnika
-        */
         default:
+            printf("Coś poszło bardzo nie tak!!!");
             break;
         }
 	    break;

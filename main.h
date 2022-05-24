@@ -21,14 +21,15 @@ extern state_t stan;
 extern int rank;
 extern int size;
 
-struct pending{
-    int clock;
-    int fraction;
-    int type;
+struct Pending{
+    int clock; //zegar lamporta
+    int fraction; //frakcja
+    int type; // req, ack itp
 };
 /* Nasze zasoby */
 extern int guides;
-extern std::vector<pending> hotels[5];
+extern std::vector<Pending> hotels[5];
+extern std::vector<Pending> guideQueue;
 
 //Frakcja
 extern int fraction;
@@ -36,8 +37,10 @@ extern int fraction;
 /* Do jakiego hotelu wchodzimy/w jakim jesteśmy */
 extern int myHotel;
 
-
+//Ilość otrzymanych acknowledgy
 extern int numberReceived;
+
+//Mój zegar lamporta
 extern int lamportClock;
 
 /* Typy procesów */
@@ -107,4 +110,5 @@ extern MPI_Datatype MPI_PAKIET_T;
 void sendPacket(packet_t *pkt, int destination, int tag);
 void changeState( state_t );
 void changeTallow( int );
+void incrementClock(packet_t *pkt, int myClock);
 #endif

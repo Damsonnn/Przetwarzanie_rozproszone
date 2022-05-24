@@ -18,8 +18,7 @@ MPI_Datatype MPI_PAKIET_T;
 pthread_t threadKom, threadMon;
 
 pthread_mutex_t stateMut = PTHREAD_MUTEX_INITIALIZER;
-pthread_mutex_t tallowMut = PTHREAD_MUTEX_INITIALIZER;
-pthread_mutex_t sendMutex = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t clockMutex = PTHREAD_MUTEX_INITIALIZER;
 
 void check_thread_support(int provided)
 {
@@ -108,11 +107,11 @@ void sendPacket(packet_t *pkt, int destination, int tag)
     int freepkt=0;
     if (pkt==0) { pkt = new packet_t; freepkt=1;}
     pkt->src = rank;
-    pthread_mutex_lock( &sendMutex );
+    pthread_mutex_lock( &clockMutex );
     lamportClock += 1;
     pkt->ts = lamportClock;
     MPI_Send( pkt, 1, MPI_PAKIET_T, destination, tag, MPI_COMM_WORLD);
-    pthread_mutex_unlock( &sendMutex );
+    pthread_mutex_unlock( &clockMutex );
     
     if (freepkt) free(pkt);
 }
@@ -122,6 +121,12 @@ void changeState( state_t newState )
     pthread_mutex_lock( &stateMut );
     stan = newState;
     pthread_mutex_unlock( &stateMut );
+}
+
+void incrementClock(packet_t *pkt, int myClock){
+    pthread_mutex_lock(&clockMutex);
+    lamportClock = max(pkt->ts, myClock) + 1;
+    pthread_mutex_unlock(&clockMutex);
 }
 
 int main(int argc, char **argv)
