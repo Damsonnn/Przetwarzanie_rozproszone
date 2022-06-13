@@ -2,15 +2,17 @@
 #include "watek_komunikacyjny.h"
 #include "watek_glowny.h"
 /* wątki */
+#include <cstdlib>
 #include <pthread.h>
-#include <stdlib.h>
 
 /* sem_init sem_destroy sem_post sem_wait */
 //#include <semaphore.h>
 /* flagi dla open */
 //#include <fcntl.h>
+int fraction, myHotel;
+int availability[hotels];
 
-state_t stan=Wait;
+state_t state = DoNothing;
 volatile char end = false;
 int size,rank,lamportClock; /* nie trzeba zerować, bo zmienna globalna statyczna */
 MPI_Datatype MPI_PAKIET_T;
@@ -19,6 +21,8 @@ pthread_t threadKom, threadMon;
 
 pthread_mutex_t stateMut = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t clockMutex = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t hotelMutex = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t guideMutex = PTHREAD_MUTEX_INITIALIZER;
 
 void check_thread_support(int provided)
 {
@@ -49,10 +53,11 @@ void check_thread_support(int provided)
 void inicjuj(int *argc, char ***argv)
 {
     int provided;
+    time_t t;
+    srand((unsigned) time(&t));
     MPI_Init_thread(argc, argv,MPI_THREAD_MULTIPLE, &provided);
     check_thread_support(provided);
 
-    lamportClock = 0;
     /* Stworzenie typu */
     /* Poniższe (aż do MPI_Type_commit) potrzebne tylko, jeżeli
        brzydzimy się czymś w rodzaju MPI_Send(&typ, sizeof(pakiet_t), MPI_BYTE....
@@ -75,12 +80,15 @@ void inicjuj(int *argc, char ***argv)
 
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     MPI_Comm_size(MPI_COMM_WORLD, &size);
-    srand(rank);
 
-    int roll = rand()%100;
-    if (roll < 45) fraction = BLUE;
-    else if (roll < 90) fraction = VIOLET;
-    else fraction = CLEANER;
+    lamportClock = rank;
+
+    // fraction = CLEANER;
+    // int roll = rand()%100;
+    // if (roll < 45) fraction = BLUE;
+    // else if (roll < 90) fraction = VIOLET;
+    if (rank < 2) fraction = BLUE;
+    else fraction = VIOLET;
 
     pthread_create( &threadKom, NULL, startKomWatek , 0);
     debug("jestem");
@@ -119,13 +127,13 @@ void sendPacket(packet_t *pkt, int destination, int tag)
 void changeState( state_t newState )
 {
     pthread_mutex_lock( &stateMut );
-    stan = newState;
+    state = newState;
     pthread_mutex_unlock( &stateMut );
 }
 
 void incrementClock(packet_t *pkt, int myClock){
     pthread_mutex_lock(&clockMutex);
-    lamportClock = max(pkt->ts, myClock) + 1;
+    lamportClock = std::max(pkt->ts, myClock) + 1;
     pthread_mutex_unlock(&clockMutex);
 }
 

@@ -9,36 +9,33 @@
 #include <unistd.h>
 #include <string.h>
 #include <pthread.h>
+#include <time.h>
 #include <vector>
 /* odkomentować, jeżeli się chce DEBUGI */
-//#define DEBUG 
+#define DEBUG 
 
 #define ROOT 0
 
+
 /* stany procesu */
-typedef enum {Wait, GoHotel, GoGuide} state_t;
-extern state_t stan;
+typedef enum {DoNothing, WaitHotel, WaitGuide, GoHotel, GoGuide} state_t;
+extern state_t state;
 extern int rank;
 extern int size;
 
-struct Pending{
-    int clock; //zegar lamporta
-    int fraction; //frakcja
-    int type; // req, ack itp
-};
 /* Nasze zasoby */
-extern int guides;
-extern std::vector<Pending> hotels[5];
-extern std::vector<Pending> guideQueue;
+const int guides = 2;
+const int hotels = 2;
+const int hotelSpace = 2;
+
+//Dostępność hoteli
+extern int availability[];
 
 //Frakcja
 extern int fraction;
 
 /* Do jakiego hotelu wchodzimy/w jakim jesteśmy */
 extern int myHotel;
-
-//Ilość otrzymanych acknowledgy
-extern int numberReceived;
 
 //Mój zegar lamporta
 extern int lamportClock;
@@ -57,9 +54,10 @@ extern int lamportClock;
 #define NEED_GUIDE 5
 
 /* Przewodnicy */
-#define GUIDE 0
+#define GUIDE -1
 
 /* to może przeniesiemy do global... */
+#define FIELDNO 5
 typedef struct {
     int ts;       /* timestamp (zegar lamporta */
     int src;      /* pole nie przesyłane, ale ustawiane w main_loop */
@@ -68,6 +66,14 @@ typedef struct {
     int resource; /* nr. hotelu lub 0 dla przewodników */
 } packet_t;
 extern MPI_Datatype MPI_PAKIET_T;
+
+struct pending{
+    int clock; //zegar lamporta
+    int fraction; //frakcja
+    int rank; // rank procesu
+};
+
+
 
 /* macro debug - działa jak printf, kiedy zdefiniowano
    DEBUG, kiedy DEBUG niezdefiniowane działa jak instrukcja pusta 
@@ -109,6 +115,6 @@ extern MPI_Datatype MPI_PAKIET_T;
 /* wysyłanie pakietu, skrót: wskaźnik do pakietu (0 oznacza stwórz pusty pakiet), do kogo, z jakim typem */
 void sendPacket(packet_t *pkt, int destination, int tag);
 void changeState( state_t );
-void changeTallow( int );
 void incrementClock(packet_t *pkt, int myClock);
+void finalizuj();
 #endif

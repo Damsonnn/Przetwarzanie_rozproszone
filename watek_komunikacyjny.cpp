@@ -1,55 +1,173 @@
 #include "main.h"
-#include "test/main.h"
 #include "watek_komunikacyjny.h"
-#include <cstdio>
+#include <algorithm>
 #include <cstdlib>
-#include <math.h>
+
+bool comparePending(const pending &a, const pending &b){
+    if (a.clock == b.clock) return a.rank < b.rank;
+    else return a.clock < b.clock;
+}
+
+bool checkHotelForAlien(std::vector<pending> hotel){
+    for (int i = 0; i < hotelSpace; i++){
+        if (hotel[i].fraction != fraction){
+            return false;
+        }
+    }
+    return true;
+}
 
 /* wątek komunikacyjny; zajmuje się odbiorem i reakcją na komunikaty */
 void *startKomWatek(void *ptr)
 {
+    std::vector<pending> hotelsQueue[hotels];
+    std::vector<pending> guideQueue;
     MPI_Status status;
-    bool is_message = false;
+    bool is_message = false, foundHotel = false;
     packet_t packet;
-    numberReceived = 0;
-    int destination;
+    int numberReceived = 0, guideAvailability = 0;
+    int destination, neededAckHotel, neededAckGuide, randomHotel;
+    int availability[hotels];
+    neededAckHotel = hotels * (size - 1); 
+    neededAckGuide = size - 1;
+    struct pending newRequest;
     /* Obrazuje pętlę odbierającą pakiety o różnych typach */
     while (true) {
-	debug("czekam na recv");
+	    //debug("czekam na recv");
         MPI_Recv( &packet, 1, MPI_PAKIET_T, MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
+        debug("odebrałem wiadomość CZAS: %d, PROCES: %d, TYP: %d, FRAKCJA: %d, ZASÓB: %d", packet.ts ,packet.src, packet.type, packet.fraction, packet.resource);
         incrementClock(&packet, lamportClock);
+        
         switch (packet.type)
         {
         case REQUEST:
-            // Obsługa request'a
-            Pending* newRequest = new Pending;
-            newRequest->clock = packet.ts;
-            newRequest->fraction = packet.fraction;
-            newRequest->type = REQUEST;
+            // Obsługa request'a   
+            
+            newRequest.clock = packet.ts;
+            newRequest.fraction = packet.fraction;
+            newRequest.rank = packet.src;
+            
             if (packet.resource == GUIDE){
                 guideQueue.push_back(newRequest);
+                std::sort(guideQueue.begin(), guideQueue.end(), comparePending);
             } else{
-
+                
+                hotelsQueue[packet.resource].push_back(newRequest);
+                std::sort(hotelsQueue[packet.resource].begin(), hotelsQueue[packet.resource].end(), comparePending);
+                //debug("Pierwszy w kolejce CZAS: %d, FRAKCJA: %d, ZASÓB: %d", hotelsQueue[packet.resource][0].clock, hotelsQueue[packet.resource][0].fraction, packet.resource);
             }
-            hotels[packet.resource]
+            
             destination = packet.src;
             packet.type = ACKNOWLEDGE;
             sendPacket(&packet, destination, 0);
+
             break;
         
-        case ACKNOWLEDGE:
-            // Obsługa acknowledge'a
+        case ACKNOWLEDGE:        
             numberReceived++;
+            if (packet.resource == GUIDE){
+                if (numberReceived == neededAckGuide){
+                    for (int i = 0; i < guideQueue.size(); i++){
+                        if (guideQueue[i].rank == rank) {
+                            guideAvailability = i + 1;
+                            if (guideAvailability <= guides){
+                                changeState(GoGuide);
+                            }
+                        }
+                    }
+                }
+            }
+            else{
+                if (numberReceived == neededAckHotel){
+                    if (rank == 0){
+                        for (int i = 0; i < hotels; i++){
+                            for (int j = 0; j < hotelsQueue[i].size(); j++){
+                                debug("Hotel %d, Miejsce: %d, Czas: %d, Proces: %d", i, j, hotelsQueue[i][j].clock, hotelsQueue[i][j].rank)
+                            }
+                        }
+                    }
+                    for (int i = 0; i < hotels; i++) availability[i] = 0;
+
+                    for (int i = 0; i < hotels; i++){
+                        for (int j = 0; j < hotelsQueue[i].size(); j++){
+                            if (hotelsQueue[i][j].fraction == CLEANER){
+                                availability[i] = 0;
+                            }else if (hotelsQueue[i][j].fraction != fraction){
+                                availability[i] = 0;
+                            }else if (hotelsQueue[i][j].rank == rank) {
+                                if (availability[i] >= 0) {
+                                    availability[i] = j + 1;
+                                    foundHotel = true;
+                                }
+                                break;
+                            }
+                        }
+                    }
+                    if (!foundHotel){
+                        randomHotel = rand() % hotels;
+                        for (int i = 0; i < hotelsQueue[randomHotel].size(); i++){
+                            if (hotelsQueue[randomHotel][i].rank == rank){
+                                availability[randomHotel] = i + 1;
+                                break;
+                            }
+                        }
+                    }
+                    packet.type = RELASE;
+    
+                    for (int i = 0; i < hotels; i++){
+                        if (availability[i] == -1){
+                            for (int j = 0; j < size; j++){
+                                packet.resource = i;
+                                sendPacket(&packet, j, 0);
+                            }
+                        }
+                    }
+                    for (int i = 0; i < hotels; i++){
+                        if (availability[i] > 0 && availability[i] <= hotelSpace){
+                            myHotel = i;
+                            changeState(GoHotel);
+                            break;
+                        }
+                    }
+                    numberReceived = 0;
+                }        
+            }
             break;
 
         case RELASE:
-            // Obsługa relase'a
+            if (packet.resource == GUIDE){
+                for (int i = 0; i < guideQueue.size(); i++){
+                    if (guideQueue[i].rank == packet.src){
+                        guideQueue.erase(guideQueue.begin() + i);
+                        if (state == WaitGuide && i + 1 < guideAvailability){
+                            guideAvailability--;
+                            if (guideAvailability <= guides){
+                                changeState(GoGuide);
+                            }
+                        }
+                    }
+                }
+            }else {
+                for (int i = 0; i < hotelsQueue[packet.resource].size(); i++){
+                    if (hotelsQueue[packet.resource][i].rank == packet.src){
+                        hotelsQueue[packet.resource].erase(hotelsQueue[packet.resource].begin() + i);
+                        if (state == WaitHotel && i + 1 < availability[packet.resource]){
+                            availability[packet.resource]--;
+                            if (availability[packet.resource] <= hotelSpace){
+                                if (checkHotelForAlien(hotelsQueue[packet.resource])) {
+                                    changeState(GoHotel);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
             break;
 
         default:
-            printf("Coś poszło bardzo nie tak!!!");
+            debug("Coś poszło bardzo nie tak!!!");
             break;
         }
-	    break;
     }
+    return 0;
 }

@@ -1,7 +1,5 @@
 #include "main.h"
-#include "test/main.h"
 #include "watek_glowny.h"
-#include <mpi.h>
 #include <unistd.h>
 
 void mainLoop()
@@ -11,17 +9,25 @@ void mainLoop()
     packet.src = rank;
     while (true) {
         packet.type = REQUEST;
-        for (int i = 1; i <= hotels->size(); i++){
+        for (int i = 0; i < hotels; i++){
             packet.resource = i;
             for (int j = 0; j < size; j++){
                 if (j != rank) sendPacket(&packet, j, 0);
+                else {
+                    
+                }
             }   
         }
-        while (stan != GoHotel) {
+        debug("czekam na hotel");
+        changeState(WaitHotel);
+        while (state != GoHotel) {
+            sleep(1);
             continue;
         }
+        debug("wchodzę do hotelu nr %d", myHotel);
+
         packet.type = RELASE;
-        for (int i = 1; i <= hotels->size(); i++){
+        for (int i = 0; i < hotels; i++){
             if (i != myHotel){
                 packet.resource = i;
                 for (int j = 0; j < size; j++){
@@ -29,18 +35,22 @@ void mainLoop()
                 }  
             }
         }
-
+        
         packet.type = REQUEST;
         packet.resource = GUIDE;
         for (int i = 0; i < size; i++){
             if (i != rank) sendPacket(&packet, i, 0);
         }
-        while (stan != GoGuide){
+        debug("czekam na przewodnika");
+        changeState(WaitGuide);
+        while (state != GoGuide){
+            sleep(1);
             continue;
         }
+        debug("wychodzę z przewodnikiem");
         //Rób swoje z przewodnikiem, potem roześlij relase'y
         sleep(1); //Coś tam robię
-
+        debug("zwalniam zasoby, hotel nr %d", myHotel);
         packet.type = RELASE;
         for (int i = 0; i < size; i++){
             sendPacket(&packet, i, 0);
@@ -49,8 +59,8 @@ void mainLoop()
         for (int i = 0; i < size; i++){
             sendPacket(&packet, i, 0);
         }
-
-        changeState(Wait);
+        exit(1);
+        changeState(DoNothing);
         sleep(1);//Czekam przed kolejną chęcią wejścia do hotelu
     }
 }
