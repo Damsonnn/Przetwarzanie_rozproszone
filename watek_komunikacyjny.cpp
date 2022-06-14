@@ -27,7 +27,6 @@ void *startKomWatek(void *ptr)
     packet_t packet;
     int numberReceived = 0, guideAvailability = 0;
     int destination, neededAckHotel, neededAckGuide, randomHotel;
-    int availability[hotels];
     neededAckHotel = hotels * (size - 1); 
     neededAckGuide = size - 1;
     struct pending newRequest;
@@ -35,7 +34,7 @@ void *startKomWatek(void *ptr)
     while (true) {
 	    //debug("czekam na recv");
         MPI_Recv( &packet, 1, MPI_PAKIET_T, MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
-        debug("odebrałem wiadomość CZAS: %d, PROCES: %d, TYP: %d, FRAKCJA: %d, ZASÓB: %d", packet.ts ,packet.src, packet.type, packet.fraction, packet.resource);
+        //debug("odebrałem wiadomość CZAS: %d, PROCES: %d, TYP: %d, FRAKCJA: %d, ZASÓB: %d", packet.ts ,packet.src, packet.type, packet.fraction, packet.resource);
         incrementClock(&packet, lamportClock);
         
         switch (packet.type)
@@ -56,36 +55,41 @@ void *startKomWatek(void *ptr)
                 std::sort(hotelsQueue[packet.resource].begin(), hotelsQueue[packet.resource].end(), comparePending);
                 //debug("Pierwszy w kolejce CZAS: %d, FRAKCJA: %d, ZASÓB: %d", hotelsQueue[packet.resource][0].clock, hotelsQueue[packet.resource][0].fraction, packet.resource);
             }
-            
-            destination = packet.src;
-            packet.type = ACKNOWLEDGE;
-            sendPacket(&packet, destination, 0);
+            if (packet.src != rank){
+                destination = packet.src;
+                packet.type = ACKNOWLEDGE;
+                sendPacket(&packet, destination, 0);
+            }
 
             break;
         
         case ACKNOWLEDGE:        
             numberReceived++;
             if (packet.resource == GUIDE){
-                if (numberReceived == neededAckGuide){
+                if (numberReceived == neededAckGuide){  
+                    changeState(WaitGuide);     
                     for (int i = 0; i < guideQueue.size(); i++){
                         if (guideQueue[i].rank == rank) {
                             guideAvailability = i + 1;
                             if (guideAvailability <= guides){
+                                debug("zabieram przewodnika ACK");
                                 changeState(GoGuide);
                             }
                         }
                     }
+                    numberReceived = 0;
                 }
             }
             else{
                 if (numberReceived == neededAckHotel){
-                    if (rank == 0){
-                        for (int i = 0; i < hotels; i++){
-                            for (int j = 0; j < hotelsQueue[i].size(); j++){
-                                debug("Hotel %d, Miejsce: %d, Czas: %d, Proces: %d", i, j, hotelsQueue[i][j].clock, hotelsQueue[i][j].rank)
-                            }
-                        }
-                    }
+                    changeState(WaitHotel);
+                    // if (true){
+                    //     for (int i = 0; i < hotels; i++){
+                    //         for (int j = 0; j < hotelsQueue[i].size(); j++){
+                    //             debug("Hotel %d, Miejsce: %d, Czas: %d, Proces: %d, Frakcja %d", i, j, hotelsQueue[i][j].clock, hotelsQueue[i][j].rank, hotelsQueue[i][j].fraction)
+                    //         }
+                    //     }
+                    // }
                     for (int i = 0; i < hotels; i++) availability[i] = 0;
 
                     for (int i = 0; i < hotels; i++){
@@ -93,7 +97,7 @@ void *startKomWatek(void *ptr)
                             if (hotelsQueue[i][j].fraction == CLEANER){
                                 availability[i] = 0;
                             }else if (hotelsQueue[i][j].fraction != fraction){
-                                availability[i] = 0;
+                                availability[i] = -1;
                             }else if (hotelsQueue[i][j].rank == rank) {
                                 if (availability[i] >= 0) {
                                     availability[i] = j + 1;
@@ -102,6 +106,9 @@ void *startKomWatek(void *ptr)
                                 break;
                             }
                         }
+                    }
+                    for (int i = 0; i < hotels; i++){
+                        debug("Hotel %d: %d", i, availability[i]);
                     }
                     if (!foundHotel){
                         randomHotel = rand() % hotels;
@@ -114,8 +121,9 @@ void *startKomWatek(void *ptr)
                     }
                     packet.type = RELASE;
     
-                    for (int i = 0; i < hotels; i++){
+                    for (int i = 0; i < hotels; i++){       
                         if (availability[i] == -1){
+                            debug("Hotel nr %d mi nie potrzebny", i);
                             for (int j = 0; j < size; j++){
                                 packet.resource = i;
                                 sendPacket(&packet, j, 0);
@@ -138,10 +146,18 @@ void *startKomWatek(void *ptr)
             if (packet.resource == GUIDE){
                 for (int i = 0; i < guideQueue.size(); i++){
                     if (guideQueue[i].rank == packet.src){
+                        for (int j = 0; j < guideQueue.size(); j++){
+                            debug("Przewodnicy 1: Miejsce: %d, Czas: %d, Proces: %d, Frakcja %d", j, guideQueue[j].clock, guideQueue[j].rank, guideQueue[j].fraction);
+                        }
                         guideQueue.erase(guideQueue.begin() + i);
+                        for (int j = 0; j < guideQueue.size(); j++){
+                            debug("Przewodnicy 2: Miejsce: %d, Czas: %d, Proces: %d, Frakcja %d", j, guideQueue[j].clock, guideQueue[j].rank, guideQueue[j].fraction);
+                        }
                         if (state == WaitGuide && i + 1 < guideAvailability){
                             guideAvailability--;
+                            debug("Sprawdzam czy guide dostępny");
                             if (guideAvailability <= guides){
+                                debug("zabieram przewodnika RELASE");
                                 changeState(GoGuide);
                             }
                         }
@@ -155,6 +171,7 @@ void *startKomWatek(void *ptr)
                             availability[packet.resource]--;
                             if (availability[packet.resource] <= hotelSpace){
                                 if (checkHotelForAlien(hotelsQueue[packet.resource])) {
+                                    myHotel = packet.resource;
                                     changeState(GoHotel);
                                 }
                             }

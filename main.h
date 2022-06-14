@@ -26,7 +26,7 @@ extern int size;
 /* Nasze zasoby */
 const int guides = 2;
 const int hotels = 2;
-const int hotelSpace = 2;
+const int hotelSpace = 1;
 
 //Dostępność hoteli
 extern int availability[];
@@ -49,9 +49,6 @@ extern int lamportClock;
 #define REQUEST 0
 #define ACKNOWLEDGE 1
 #define RELASE 2
-#define DONE 3
-#define NEED_HOTEL 4
-#define NEED_GUIDE 5
 
 /* Przewodnicy */
 #define GUIDE -1

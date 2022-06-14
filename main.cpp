@@ -21,8 +21,6 @@ pthread_t threadKom, threadMon;
 
 pthread_mutex_t stateMut = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t clockMutex = PTHREAD_MUTEX_INITIALIZER;
-pthread_mutex_t hotelMutex = PTHREAD_MUTEX_INITIALIZER;
-pthread_mutex_t guideMutex = PTHREAD_MUTEX_INITIALIZER;
 
 void check_thread_support(int provided)
 {
