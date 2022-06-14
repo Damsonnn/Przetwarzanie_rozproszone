@@ -1,6 +1,8 @@
 #include "main.h"
 #include "watek_komunikacyjny.h"
 #include "watek_glowny.h"
+#include "watek_komunikacyjny_sprzatacz.h"
+#include "watek_glowny_sprzatacz.h"
 /* wątki */
 #include <cstdlib>
 #include <pthread.h>
@@ -21,6 +23,8 @@ pthread_t threadKom, threadMon;
 
 pthread_mutex_t stateMut = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t clockMutex = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t hotelMutex = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t guideMutex = PTHREAD_MUTEX_INITIALIZER;
 
 void check_thread_support(int provided)
 {
@@ -52,7 +56,7 @@ void inicjuj(int *argc, char ***argv)
 {
     int provided;
     time_t t;
-    srand((unsigned) time(&t));
+    srand(rank);
     MPI_Init_thread(argc, argv,MPI_THREAD_MULTIPLE, &provided);
     check_thread_support(provided);
 
@@ -81,14 +85,12 @@ void inicjuj(int *argc, char ***argv)
 
     lamportClock = rank;
 
-    // fraction = CLEANER;
-    // int roll = rand()%100;
-    // if (roll < 45) fraction = BLUE;
-    // else if (roll < 90) fraction = VIOLET;
-    if (rank < 4) fraction = BLUE;
+    if (rank < cleaners) fraction = CLEANER;
+    else if (rank < (users - cleaners) / 2 + cleaners) fraction = BLUE;
     else fraction = VIOLET;
-
-    pthread_create( &threadKom, NULL, startKomWatek , 0);
+    if (fraction == CLEANER) pthread_create( &threadKom, NULL, startKomWatekSprzatacz , 0);
+    else pthread_create( &threadKom, NULL, startKomWatek , 0);
+    
     debug("jestem");
 }
 
@@ -139,8 +141,8 @@ int main(int argc, char **argv)
 {
     /* Tworzenie wątków, inicjalizacja itp */
     inicjuj(&argc,&argv); // tworzy wątek komunikacyjny w "watek_komunikacyjny.c"
-    mainLoop();          // w pliku "watek_glowny.c"
-
+    if (fraction == CLEANER) mainLoopCleaner();          // w pliku "watek_glowny.c"
+    else mainLoop();
     finalizuj();
     return 0;
 }

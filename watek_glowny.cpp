@@ -15,7 +15,7 @@ void mainLoop()
                 sendPacket(&packet, j, 0);
             }   
         }
-        //debug("czekam na hotel");
+        debug("czekam na hotel");
 
         while (state != GoHotel) {
             sleep(1);
@@ -34,6 +34,7 @@ void mainLoop()
             }
         }
         sleep(1);
+        //debug("dej mi przewodnika");
         packet.type = REQUEST;
         packet.resource = GUIDE;
         for (int i = 0; i < size; i++){

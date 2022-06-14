@@ -34,8 +34,8 @@ void *startKomWatek(void *ptr)
     struct pending newRequest;
     /* Obrazuje pętlę odbierającą pakiety o różnych typach */
     while (true) {
-        if (lamportClock > 1000) exit(1);
 	    //debug("czekam na recv");
+        if(lamportClock > 10000) exit(1);
         MPI_Recv( &packet, 1, MPI_PAKIET_T, MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
         //debug("odebrałem wiadomość CZAS: %d, PROCES: %d, TYP: %d, FRAKCJA: %d, ZASÓB: %d", packet.ts ,packet.src, packet.type, packet.fraction, packet.resource);
         incrementClock(&packet, lamportClock);
@@ -87,13 +87,11 @@ void *startKomWatek(void *ptr)
                 if (numberReceived == neededAckHotel){
                     foundHotel = false;
                     changeState(WaitHotel);
-                    if (true){
-                        for (int i = 0; i < hotels; i++){
-                            for (int j = 0; j < hotelsQueue[i].size(); j++){
-                                debug("Hotel %d, Miejsce: %d, Czas: %d, Proces: %d, Frakcja %d", i, j, hotelsQueue[i][j].clock, hotelsQueue[i][j].rank, hotelsQueue[i][j].fraction)
-                            }
-                        }
-                    }
+                    // for (int i = 0; i < hotels; i++){
+                    //     for (int j = 0; j < hotelsQueue[i].size(); j++){
+                    //         debug("Hotel %d, Miejsce: %d, Czas: %d, Proces: %d, Frakcja %d", i, j, hotelsQueue[i][j].clock, hotelsQueue[i][j].rank, hotelsQueue[i][j].fraction)
+                    //     }
+                    // }
                     for (int i = 0; i < hotels; i++) availability[i] = 0;
 
                     for (int i = 0; i < hotels; i++){

@@ -9,7 +9,6 @@
 #include <unistd.h>
 #include <string.h>
 #include <pthread.h>
-#include <time.h>
 #include <vector>
 /* odkomentować, jeżeli się chce DEBUGI */
 #define DEBUG 
@@ -23,10 +22,16 @@ extern state_t state;
 extern int rank;
 extern int size;
 
+// Usunięcie aktywnego czekania
+extern pthread_mutex_t hotelMutex;
+extern pthread_mutex_t guideMutex;
+
 /* Nasze zasoby */
 const int guides = 3;
 const int hotels = 3;
 const int hotelSpace = 2;
+const int cleaners = 2;
+const int users = 10;
 
 //Dostępność hoteli
 extern int availability[];
@@ -91,7 +96,8 @@ struct pending{
                                             
 */
 #ifdef DEBUG
-#define debug(FORMAT,...) printf("%d %c[%d;%dm [ %d]: " FORMAT "%c[%d;%dm\n",   lamportClock,27, (1+(rank/7))%2, 31+(6+rank)%7, rank, ##__VA_ARGS__, 27,0,37);
+//#define debug(FORMAT,...) printf("%c[%d;%dm [%d/%d]: " FORMAT "%c[%d;%dm\n",  27, (1+(rank/7))%2, 31+(6+rank)%7, lamportClock, rank, ##__VA_ARGS__, 27,0,37);
+#define debug(FORMAT,...) printf(" [%d] %c[%d;%dm [%d]: " FORMAT "%c[%d;%dm\n",  lamportClock, 27, (1+(rank/7))%2, 31+(6+rank)%7, rank, ##__VA_ARGS__, 27,0,37);
 #else
 #define debug(...) ;
 #endif
