@@ -24,9 +24,9 @@ extern int rank;
 extern int size;
 
 /* Nasze zasoby */
-const int guides = 2;
-const int hotels = 2;
-const int hotelSpace = 1;
+const int guides = 3;
+const int hotels = 3;
+const int hotelSpace = 2;
 
 //Dostępność hoteli
 extern int availability[];
@@ -91,7 +91,7 @@ struct pending{
                                             
 */
 #ifdef DEBUG
-#define debug(FORMAT,...) printf("%c[%d;%dm [%d/%d]: " FORMAT "%c[%d;%dm\n",  27, (1+(rank/7))%2, 31+(6+rank)%7, rank, lamportClock, ##__VA_ARGS__, 27,0,37);
+#define debug(FORMAT,...) printf("%d %c[%d;%dm [ %d]: " FORMAT "%c[%d;%dm\n",   lamportClock,27, (1+(rank/7))%2, 31+(6+rank)%7, rank, ##__VA_ARGS__, 27,0,37);
 #else
 #define debug(...) ;
 #endif

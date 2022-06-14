@@ -85,7 +85,7 @@ void inicjuj(int *argc, char ***argv)
     // int roll = rand()%100;
     // if (roll < 45) fraction = BLUE;
     // else if (roll < 90) fraction = VIOLET;
-    if (rank < 2) fraction = BLUE;
+    if (rank < 4) fraction = BLUE;
     else fraction = VIOLET;
 
     pthread_create( &threadKom, NULL, startKomWatek , 0);

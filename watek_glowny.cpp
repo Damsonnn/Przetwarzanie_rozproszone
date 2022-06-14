@@ -15,7 +15,7 @@ void mainLoop()
                 sendPacket(&packet, j, 0);
             }   
         }
-        debug("czekam na hotel");
+        //debug("czekam na hotel");
 
         while (state != GoHotel) {
             sleep(1);
@@ -27,7 +27,7 @@ void mainLoop()
         for (int i = 0; i < hotels; i++){
             if (i != myHotel && availability[i] > 0){
                 packet.resource = i;
-                debug("Hotel nr %d niepotrzebny, mam swój", i);
+                //debug("Hotel nr %d niepotrzebny, mam swój", i);
                 for (int j = 0; j < size; j++){
                     sendPacket(&packet, j, 0);
                 }  
@@ -39,7 +39,7 @@ void mainLoop()
         for (int i = 0; i < size; i++){
             sendPacket(&packet, i, 0);
         }
-        debug("czekam na przewodnika");
+        //debug("czekam na przewodnika");
     
         while (state != GoGuide){
             sleep(1);
