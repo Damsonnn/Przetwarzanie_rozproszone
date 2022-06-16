@@ -4,6 +4,6 @@
 #include<algorithm>
 
 /* wątek komunikacyjny: odbieranie wiadomości i reagowanie na nie poprzez zmiany stanu */
-void *startKomWatekSprzatacz(void *ptr);
+void *startComThreadCleaner(void *ptr);
 
 #endif

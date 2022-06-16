@@ -1,8 +1,8 @@
 #include "main.h"
-#include "watek_komunikacyjny.h"
-#include "watek_glowny.h"
-#include "watek_komunikacyjny_sprzatacz.h"
-#include "watek_glowny_sprzatacz.h"
+#include "communication_thread_alien.h"
+#include "main_thread_alien.h"
+#include "communication_thread_cleaner.h"
+#include "main_thread_cleaner.h"
 /* wątki */
 #include <cstdlib>
 #include <pthread.h>
@@ -88,8 +88,8 @@ void inicjuj(int *argc, char ***argv)
     if (rank < cleaners) fraction = CLEANER;
     else if (rank < (users - cleaners) / 2 + cleaners) fraction = BLUE;
     else fraction = VIOLET;
-    if (fraction == CLEANER) pthread_create( &threadKom, NULL, startKomWatekSprzatacz , 0);
-    else pthread_create( &threadKom, NULL, startKomWatek , 0);
+    if (fraction == CLEANER) pthread_create( &threadKom, NULL, startComThreadCleaner , 0);
+    else pthread_create( &threadKom, NULL, startComThreadAlien , 0);
     
     debug("jestem");
 }
@@ -142,7 +142,7 @@ int main(int argc, char **argv)
     /* Tworzenie wątków, inicjalizacja itp */
     inicjuj(&argc,&argv); // tworzy wątek komunikacyjny w "watek_komunikacyjny.c"
     if (fraction == CLEANER) mainLoopCleaner();          // w pliku "watek_glowny.c"
-    else mainLoop();
+    else mainLoopAlien();
     finalizuj();
     return 0;
 }
